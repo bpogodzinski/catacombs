@@ -64,6 +64,14 @@ private:
 	std::unique_ptr<DirectX::CommonStates> m_states;
 	std::unique_ptr<DirectX::IEffectFactory> m_fxFactory;
 	std::unique_ptr<DirectX::Model> m_model;
+	std::unique_ptr<DirectX::Model> m_model_skull;
+
+	std::unique_ptr<DirectX::Keyboard> m_keyboard;
+	std::unique_ptr<DirectX::Mouse> m_mouse;
+
+	float m_pitch;
+	float m_yaw;
+	DirectX::SimpleMath::Vector3 m_cameraPos;
 
     // Rendering loop timer.
     DX::StepTimer                                   m_timer;

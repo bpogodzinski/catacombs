@@ -12,12 +12,23 @@ using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
-Game::Game() noexcept :
-    m_window(nullptr),
-    m_outputWidth(800),
-    m_outputHeight(600),
-    m_featureLevel(D3D_FEATURE_LEVEL_9_1)
+namespace
 {
+	const XMVECTORF32 START_POSITION = { 0.f, -1.5f, 0.f, 0.f };
+	const XMVECTORF32 ROOM_BOUNDS = { 8.f, 6.f, 12.f, 0.f };
+	const float ROTATION_GAIN = 0.004f;
+	const float MOVEMENT_GAIN = 0.07f;
+}
+
+Game::Game() noexcept :
+	m_window(0),
+	m_outputWidth(800),
+	m_outputHeight(600),
+	m_featureLevel(D3D_FEATURE_LEVEL_9_1),
+	m_pitch(0),
+	m_yaw(0)
+{
+	m_cameraPos = START_POSITION.v;
 }
 
 // Initialize the Direct3D resources required to run.
@@ -37,6 +48,10 @@ void Game::Initialize(HWND window, int width, int height)
     m_timer.SetFixedTimeStep(true);
     m_timer.SetTargetElapsedSeconds(1.0 / 60);
     */
+	m_keyboard = std::make_unique<Keyboard>();
+	m_mouse = std::make_unique<Mouse>();
+	m_mouse->SetWindow(window);
+
 }
 
 // Executes the basic game loop.
@@ -56,8 +71,74 @@ void Game::Update(DX::StepTimer const& timer)
     float elapsedTime = float(timer.GetElapsedSeconds());
 
     // TODO: Add your game logic here.
-	float time = float(timer.GetTotalSeconds());
-	m_world = Matrix::CreateRotationZ(cosf(time) * 2.f);
+	auto kb = m_keyboard->GetState();
+	if (kb.Escape)
+	{
+		ExitGame();
+	}
+
+	if (kb.Home)
+	{
+		m_cameraPos = START_POSITION.v;
+		m_pitch = m_yaw = 0;
+	}
+
+	Vector3 move = Vector3::Zero;
+
+	if (kb.Up || kb.W)
+		move.y += 1.f;
+
+	if (kb.Down || kb.S)
+		move.y -= 1.f;
+
+	if (kb.Left || kb.A)
+		move.x += 1.f;
+
+	if (kb.Right || kb.D)
+		move.x -= 1.f;
+
+	if (kb.PageUp || kb.Space)
+		move.z += 1.f;
+
+	if (kb.PageDown || kb.X)
+		move.z -= 1.f;
+
+	Quaternion q = Quaternion::CreateFromYawPitchRoll(m_yaw, m_pitch, 0.f);
+
+	move = Vector3::Transform(move, q);
+
+	move *= MOVEMENT_GAIN;
+
+	m_cameraPos += move;
+
+	auto mouse = m_mouse->GetState();
+
+	if (mouse.positionMode == Mouse::MODE_RELATIVE)
+	{
+		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f)
+			* ROTATION_GAIN;
+
+		m_pitch -= delta.y;
+		m_yaw -= delta.x;
+
+		// limit pitch to straight up or straight down
+		// with a little fudge-factor to avoid gimbal lock
+		float limit = XM_PI / 2.0f - 0.01f;
+		m_pitch = std::max(-limit, m_pitch);
+		m_pitch = std::min(+limit, m_pitch);
+
+		// keep longitude in sane range by wrapping
+		if (m_yaw > XM_PI)
+		{
+			m_yaw -= XM_PI * 2.0f;
+		}
+		else if (m_yaw < -XM_PI)
+		{
+			m_yaw += XM_PI * 2.0f;
+		}
+	}
+
+	m_mouse->SetMode(mouse.leftButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
 
     elapsedTime;
 }
@@ -74,7 +155,16 @@ void Game::Render()
     Clear();
 
     // TODO: Add your rendering code here.
-	m_model->Draw(m_d3dContext.Get(), *m_states, m_world, m_view, m_proj);
+	float y = sinf(m_pitch);
+	float r = cosf(m_pitch);
+	float z = r * cosf(m_yaw);
+	float x = r * sinf(m_yaw);
+
+	XMVECTOR lookAt = m_cameraPos + Vector3(x, y, z);
+
+	XMMATRIX view = XMMatrixLookAtRH(m_cameraPos, lookAt, Vector3::Up);
+
+	m_model->Draw(m_d3dContext.Get(), *m_states, m_world, view, m_proj);
 
     Present();
 }
@@ -83,7 +173,7 @@ void Game::Render()
 void Game::Clear()
 {
     // Clear the views.
-    m_d3dContext->ClearRenderTargetView(m_renderTargetView.Get(), Colors::CornflowerBlue);
+    m_d3dContext->ClearRenderTargetView(m_renderTargetView.Get(), Colors::Black);
     m_d3dContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     m_d3dContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
@@ -221,6 +311,7 @@ void Game::CreateDevice()
 	m_states = std::make_unique<CommonStates>(m_d3dDevice.Get());
 	m_fxFactory = std::make_unique<EffectFactory>(m_d3dDevice.Get());
 	m_model = Model::CreateFromSDKMESH(m_d3dDevice.Get(), L"model.sdkmesh", *m_fxFactory);
+	m_model_skull = Model::CreateFromSDKMESH(m_d3dDevice.Get(), L"Skull.sdkmesh", *m_fxFactory);
 	m_world = Matrix::Identity;
 }
 
@@ -319,8 +410,8 @@ void Game::CreateResources()
 
     // TODO: Initialize windows-size dependent objects here.
 
-	m_view = Matrix::CreateLookAt(Vector3(2.f, 2.f, 2.f), Vector3::Zero, Vector3::UnitY);
-	m_proj = Matrix::CreatePerspectiveFieldOfView(XM_PI / 4.f, float(backBufferWidth) / float(backBufferHeight), 0.1f, 10.f);
+	m_view = Matrix::CreateLookAt(Vector3(5.f, 5.f, 5.f), Vector3::Zero, Vector3::UnitY);
+	m_proj = Matrix::CreatePerspectiveFieldOfView(5.f, float(backBufferWidth) /float(backBufferHeight), 0.1f, 100.f);
 }
 
 void Game::OnDeviceLost()
@@ -329,6 +420,7 @@ void Game::OnDeviceLost()
 	m_states.reset();
 	m_fxFactory.reset();
 	m_model.reset();
+	m_model_skull.reset();
 
 
     m_depthStencilView.Reset();

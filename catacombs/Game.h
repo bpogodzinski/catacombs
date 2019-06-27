@@ -58,6 +58,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView>  m_depthStencilView;
 
 	DirectX::SimpleMath::Matrix m_world;
+	DirectX::SimpleMath::Matrix m_world2;
 	DirectX::SimpleMath::Matrix m_view;
 	DirectX::SimpleMath::Matrix m_proj;
 
@@ -68,6 +69,8 @@ private:
 
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;
 	std::unique_ptr<DirectX::Mouse> m_mouse;
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_texture;
 
 	float m_pitch;
 	float m_yaw;

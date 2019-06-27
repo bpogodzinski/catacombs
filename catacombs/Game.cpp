@@ -14,7 +14,7 @@ using Microsoft::WRL::ComPtr;
 
 namespace
 {
-	const XMVECTORF32 START_POSITION = { 0.f, -1.5f, 0.f, 0.f };
+	const XMVECTORF32 START_POSITION = { 0.f, 0.0f, 0.f, 0.f };
 	const XMVECTORF32 ROOM_BOUNDS = { 8.f, 6.f, 12.f, 0.f };
 	const float ROTATION_GAIN = 0.004f;
 	const float MOVEMENT_GAIN = 0.07f;
@@ -140,7 +140,11 @@ void Game::Update(DX::StepTimer const& timer)
 
 	m_mouse->SetMode(mouse.leftButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
 
-    elapsedTime;
+	m_world = Matrix::CreateRotationX(1.5f) * Matrix::CreateTranslation(Vector3(0, -1, 0));
+	Vector3 pos = Vector3::Lerp(Vector3(2.f, 5.f, 10.f),	Vector3(2.f, 0.f, 1.f), cos(timer.GetTotalSeconds()));
+	Vector3 posCircle(-1 + cos(timer.GetTotalSeconds()) * 7, cos(timer.GetTotalSeconds()), 1 + sin(timer.GetTotalSeconds()) * 9);
+	m_world2 = Matrix::CreateScale(0.05f) * Matrix::CreateRotationX(1.5f) * Matrix::CreateTranslation(posCircle);
+	
 }
 
 // Draws the scene.
@@ -162,10 +166,11 @@ void Game::Render()
 
 	XMVECTOR lookAt = m_cameraPos + Vector3(x, y, z);
 
-	XMMATRIX view = XMMatrixLookAtRH(m_cameraPos, lookAt, Vector3::Up);
+	XMMATRIX view = XMMatrixLookAtRH(m_cameraPos, lookAt, Vector3::Up);	
 
 	m_model->Draw(m_d3dContext.Get(), *m_states, m_world, view, m_proj);
-
+	m_model_skull->Draw(m_d3dContext.Get(), *m_states, m_world2, view, m_proj);
+	
     Present();
 }
 
@@ -312,7 +317,9 @@ void Game::CreateDevice()
 	m_fxFactory = std::make_unique<EffectFactory>(m_d3dDevice.Get());
 	m_model = Model::CreateFromSDKMESH(m_d3dDevice.Get(), L"model.sdkmesh", *m_fxFactory);
 	m_model_skull = Model::CreateFromSDKMESH(m_d3dDevice.Get(), L"Skull.sdkmesh", *m_fxFactory);
+	
 	m_world = Matrix::Identity;
+	m_world2 = Matrix::Identity;
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
@@ -410,8 +417,9 @@ void Game::CreateResources()
 
     // TODO: Initialize windows-size dependent objects here.
 
-	m_view = Matrix::CreateLookAt(Vector3(5.f, 5.f, 5.f), Vector3::Zero, Vector3::UnitY);
-	m_proj = Matrix::CreatePerspectiveFieldOfView(5.f, float(backBufferWidth) /float(backBufferHeight), 0.1f, 100.f);
+	DX::ThrowIfFailed(CreateWICTextureFromFile(m_d3dDevice.Get(), L"skulltex.jpg", nullptr, m_texture.ReleaseAndGetAddressOf()));
+	
+	m_proj = Matrix::CreatePerspectiveFieldOfView(5.f, float(backBufferWidth) /float(backBufferHeight), 0.1f, 1000.f);
 }
 
 void Game::OnDeviceLost()
@@ -421,7 +429,7 @@ void Game::OnDeviceLost()
 	m_fxFactory.reset();
 	m_model.reset();
 	m_model_skull.reset();
-
+	m_texture.Reset();
 
     m_depthStencilView.Reset();
     m_renderTargetView.Reset();

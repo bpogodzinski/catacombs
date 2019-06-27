@@ -76,10 +76,16 @@ private:
 	float m_yaw;
 	DirectX::SimpleMath::Vector3 m_cameraPos;
 
-	std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
-	DirectX::SimpleMath::Vector2 m_screenPos;
-	DirectX::SimpleMath::Vector2 m_origin;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
+	enum PSConstantBuffer
+	{
+		PS_LIGHT,
+		PSNumConstantBuffers
+	};
+	Microsoft::WRL::ComPtr<ID3D11Buffer> ps_d3dConstantBuffers[PSNumConstantBuffers];
 
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState;
+	
 
 
     // Rendering loop timer.

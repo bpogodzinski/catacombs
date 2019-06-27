@@ -49,6 +49,31 @@ void Game::Initialize(HWND window, int width, int height)
     CreateDevice();
 
     CreateResources();
+	auto blob = DX::ReadData(L"PixelShader.cso");
+	DX::ThrowIfFailed(m_d3dDevice->CreatePixelShader(blob.data(), blob.size(), nullptr, m_pixelShader.ReleaseAndGetAddressOf()));
+
+	D3D11_SAMPLER_DESC sampDesc;
+	ZeroMemory(&sampDesc, sizeof(sampDesc));
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MinLOD = 0;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	DX::ThrowIfFailed(m_d3dDevice->CreateSamplerState(&sampDesc, &m_samplerState));
+
+	{
+		CD3D11_BUFFER_DESC cbDesc;
+		ZeroMemory(&cbDesc, sizeof(D3D11_BUFFER_DESC));
+
+		cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		cbDesc.ByteWidth = sizeof(Light);
+		cbDesc.CPUAccessFlags = 0;
+		cbDesc.Usage = D3D11_USAGE_DEFAULT;
+		DX::ThrowIfFailed(m_d3dDevice->CreateBuffer(&cbDesc, nullptr, &ps_d3dConstantBuffers[PS_LIGHT]));
+	}
 
 	light.dir = XMFLOAT3(0.3f, 0.3f, -0.5f);
 	light.ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -175,9 +200,14 @@ void Game::Render()
 	float z = r * cosf(m_yaw);
 	float x = r * sinf(m_yaw);
 
+	m_d3dContext->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+
 	XMVECTOR lookAt = m_cameraPos + Vector3(x, y, z);
 
 	XMMATRIX view = XMMatrixLookAtRH(m_cameraPos, lookAt, Vector3::Up);	
+
+	m_d3dContext->PSSetConstantBuffers(0, 1, ps_d3dConstantBuffers->GetAddressOf());
+	m_d3dContext->UpdateSubresource(ps_d3dConstantBuffers[PS_LIGHT].Get(), 0, nullptr, &light, sizeof(Light), 0);
 
 	m_model->Draw(m_d3dContext.Get(), *m_states, m_world, view, m_proj);
 	m_model_skull->Draw(m_d3dContext.Get(), *m_states, m_world2, view, m_proj);

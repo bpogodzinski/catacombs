@@ -76,6 +76,12 @@ private:
 	float m_yaw;
 	DirectX::SimpleMath::Vector3 m_cameraPos;
 
+	std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
+	DirectX::SimpleMath::Vector2 m_screenPos;
+	DirectX::SimpleMath::Vector2 m_origin;
+
+
+
     // Rendering loop timer.
     DX::StepTimer                                   m_timer;
 };

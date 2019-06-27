@@ -141,7 +141,6 @@ void Game::Update(DX::StepTimer const& timer)
 	m_mouse->SetMode(mouse.leftButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
 
 	m_world = Matrix::CreateRotationX(1.5f) * Matrix::CreateTranslation(Vector3(0, -1, 0));
-	Vector3 pos = Vector3::Lerp(Vector3(2.f, 5.f, 10.f),	Vector3(2.f, 0.f, 1.f), cos(timer.GetTotalSeconds()));
 	Vector3 posCircle(-1 + cos(timer.GetTotalSeconds()) * 7, cos(timer.GetTotalSeconds()), 1 + sin(timer.GetTotalSeconds()) * 9);
 	m_world2 = Matrix::CreateScale(0.05f) * Matrix::CreateRotationX(1.5f) * Matrix::CreateTranslation(posCircle);
 	
@@ -179,6 +178,7 @@ void Game::Clear()
 {
     // Clear the views.
     m_d3dContext->ClearRenderTargetView(m_renderTargetView.Get(), Colors::Black);
+	
     m_d3dContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     m_d3dContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());

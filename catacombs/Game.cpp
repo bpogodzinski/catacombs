@@ -12,6 +12,14 @@ using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
+_declspec(align(16)) struct Light
+{
+	XMFLOAT3 dir;
+	XMFLOAT4 ambient;
+	XMFLOAT4 diffuse;
+};
+Light light;
+
 namespace
 {
 	const XMVECTORF32 START_POSITION = { 0.f, 0.0f, 0.f, 0.f };
@@ -41,6 +49,10 @@ void Game::Initialize(HWND window, int width, int height)
     CreateDevice();
 
     CreateResources();
+
+	light.dir = XMFLOAT3(0.3f, 0.3f, -0.5f);
+	light.ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	light.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:

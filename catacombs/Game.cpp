@@ -23,7 +23,6 @@ Light light;
 namespace
 {
 	const XMVECTORF32 START_POSITION = { 0.f, 0.0f, 0.f, 0.f };
-	const XMVECTORF32 ROOM_BOUNDS = { 8.f, 6.f, 12.f, 0.f };
 	const float ROTATION_GAIN = 0.004f;
 	const float MOVEMENT_GAIN = 0.07f;
 }
@@ -123,16 +122,16 @@ void Game::Update(DX::StepTimer const& timer)
 	Vector3 move = Vector3::Zero;
 
 	if (kb.Up || kb.W)
-		move.y += 1.f;
-
-	if (kb.Down || kb.S)
 		move.y -= 1.f;
 
+	if (kb.Down || kb.S)
+		move.y += 1.f;
+
 	if (kb.Left || kb.A)
-		move.x += 1.f;
+		move.x -= 1.f;
 
 	if (kb.Right || kb.D)
-		move.x -= 1.f;
+		move.x += 1.f;
 
 	if (kb.PageUp || kb.Space)
 		move.z += 1.f;
@@ -286,8 +285,8 @@ void Game::OnWindowSizeChanged(int width, int height)
 void Game::GetDefaultSize(int& width, int& height) const
 {
     // TODO: Change to desired default window size (note minimum size is 320x200).
-    width = 800;
-    height = 600;
+    width = 1000;
+    height = 800;
 }
 
 // These are the resources that depend on the device.
@@ -359,9 +358,7 @@ void Game::CreateDevice()
 	m_fxFactory = std::make_unique<EffectFactory>(m_d3dDevice.Get());
 	m_model = Model::CreateFromSDKMESH(m_d3dDevice.Get(), L"model.sdkmesh", *m_fxFactory);
 	m_model_skull = Model::CreateFromSDKMESH(m_d3dDevice.Get(), L"Skull.sdkmesh", *m_fxFactory);
-	
-	m_world = Matrix::Identity;
-	m_world2 = Matrix::Identity;
+
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
